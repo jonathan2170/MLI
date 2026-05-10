@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="保障健診">
+<meta name="theme-color" content="#E63946">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>保障健診 · 保障彙整解析</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif;
+    background: #F2F2F7;
+    color: #1C1C1E;
+    overscroll-behavior-y: none;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: calc(72px + env(safe-area-inset-bottom));
+    min-height: 100vh;
+  }
+  header.appbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    padding: 12px 20px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  }
+  header h1 { margin: 0; font-size: 17px; font-weight: 600; flex: 1; text-align: center; }
+  header button.icon-btn {
+    background: none; border: none; padding: 4px 8px;
+    color: #E63946; font-size: 15px; font-weight: 500;
+    font-family: inherit; cursor: pointer; min-width: 56px;
+  }
+
+  main { padding: 16px; max-width: 720px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+
+  .card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .card h2 {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+  .card p { font-size: 13px; line-height: 1.5; color: #6C6C70; margin: 0 0 8px 0; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 100%;
+    padding: 14px 18px;
+    border: none; border-radius: 12px;
+    font-size: 16px; font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+    font-family: inherit;
+    gap: 8px;
+  }
+  .btn:active { opacity: 0.6; }
+  .btn-primary { background: #E63946; color: #fff; }
+  .btn-secondary { background: #F2F2F7; color: #1C1C1E; }
+  .btn-danger { background: #fff; color: #FF3B30; border: 1px solid #FFB3B0; }
+  .btn-ghost { background: none; color: #007AFF; border: 1px solid #D1D1D6; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn + .btn { margin-top: 8px; }
+  .btn-row { display: flex; gap: 8px; }
+  .btn-row .btn { margin: 0; }
+
+  /* Inputs */
+  label { display: block; font-size: 13px; color: #6C6C70; margin-bottom: 6px; }
+  input[type="password"], input[type="text"], input[type="tel"], input[type="file"], textarea, select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #D1D1D6;
+    border-radius: 10px;
+    font-size: 16px;
+    font-family: inherit;
+    background: #fff;
+    color: #1C1C1E;
+  }
+  textarea { resize: vertical; min-height: 120px; font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 13px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid #007AFF; outline-offset: -1px; }
+
+  /* Segment control */
+  .segment {
+    display: flex; background: #F2F2F7; border-radius: 10px; padding: 2px; gap: 2px;
+  }
+  .segment label {
+    flex: 1; margin: 0; cursor: pointer;
+  }
+  .segment input { display: none; }
+  .segment span {
+    display: block; padding: 10px 8px; border-radius: 8px;
+    text-align: center; font-size: 14px; font-weight: 500; color: #6C6C70;
+    transition: background 0.15s, color 0.15s;
+  }
+  .segment input:checked + span {
+    background: #fff; color: #1C1C1E;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  /* Step indicator for manual mode */
+  .step {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px;
+    background: #F8F9FB; border-radius: 12px; margin-bottom: 10px;
+  }
+  .step .num {
+    flex-shrink: 0; width: 26px; height: 26px;
+    background: #E63946; color: #fff;
+    border-radius: 50%; font-size: 13px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .step .body { flex: 1; min-width: 0; }
+  .step .body .title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+  .step .body .desc { font-size: 13px; color: #6C6C70; line-height: 1.5; }
+
+  /* Upload */
+  .drop-zone {
+    border: 2px dashed #D1D1D6;
+    border-radius: 14px;
+    padding: 32px 16px;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .drop-zone:active { background: #F2F2F7; border-color: #007AFF; }
+  .drop-zone .icon { font-size: 40px; margin-bottom: 8px; }
+  .drop-zone .title { font-size: 16px; font-weight: 600; }
+  .drop-zone .hint { font-size: 13px; color: #8E8E93; margin-top: 4px; }
+  .file-info { display: flex; align-items: center; gap: 12px; padding: 12px; background: #F2F2F7; border-radius: 10px; margin-top: 12px; }
+  .file-info .name { flex: 1; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-info .size { font-size: 12px; color: #8E8E93; }
+
+  /* In-app card sections */
+  .section {
+    background: #fff;
+    border-radius: 14px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 12px 16px;
+    color: #fff;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .section-body { padding: 8px 0; }
+  .field {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    border-bottom: 1px solid #F2F2F7;
+    font-size: 14px;
+  }
+  .field:last-child { border-bottom: none; }
+  .field .label { color: #1C1C1E; flex: 1; }
+  .field .value { font-weight: 600; color: #1C1C1E; min-width: 80px; text-align: right; }
+  .field .value.zero { color: #C7C7CC; }
+  .field .value .unit { font-size: 11px; color: #8E8E93; font-weight: normal; margin-left: 2px; }
+
+  /* Client header */
+  .client-card {
+    background: linear-gradient(135deg, #E63946 0%, #C1121F 100%);
+    color: #fff;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .client-card .name { font-size: 22px; font-weight: 700; }
+  .client-card .meta { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+
+  /* History */
+  .history-item {
+    background: #fff; border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer;
+  }
+  .history-item:active { background: #F2F2F7; }
+  .history-item .info { flex: 1; }
+  .history-item .name { font-weight: 600; font-size: 15px; }
+  .history-item .date { font-size: 12px; color: #8E8E93; margin-top: 2px; }
+  .history-item .delete { background: none; border: none; color: #FF3B30; font-size: 14px; padding: 6px 10px; }
+
+  /* Empty state */
+  .empty { text-align: center; padding: 40px 20px; color: #8E8E93; }
+  .empty .icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
+
+  /* Tab bar */
+  nav.tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-top: 1px solid rgba(0,0,0,0.08);
+    display: flex;
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 60;
+  }
+  nav.tabbar button {
+    flex: 1;
+    background: none; border: none;
+    padding: 8px 4px;
+    font-family: inherit;
+    font-size: 11px;
+    color: #8E8E93;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+  }
+  nav.tabbar button.active { color: #E63946; }
+  nav.tabbar button .icon { font-size: 22px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; left: 50%; top: 80px;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); color: #fff;
+    padding: 10px 18px; border-radius: 20px;
+    font-size: 14px;
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+    max-width: 90%; text-align: center;
+  }
+  .toast.show { opacity: 1; }
+
+  /* Loading overlay */
+  .overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 200;
+  }
+  .overlay.show { display: flex; }
+  .overlay .panel {
+    background: #fff; padding: 24px 32px; border-radius: 14px;
+    text-align: center; min-width: 220px; max-width: 90%;
+  }
+  .spinner {
+    width: 36px; height: 36px;
+    border: 3px solid #F2F2F7;
+    border-top-color: #E63946;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 12px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .help-text { font-size: 12px; color: #8E8E93; line-height: 1.5; margin-top: 6px; }
+  .help-text a { color: #007AFF; text-decoration: none; }
+
+  /* Edit checkboxes for export */
+  .checkbox-group { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .checkbox-group label {
+    display: inline-flex; align-items: center;
+    padding: 6px 12px; background: #F2F2F7; border-radius: 16px;
+    cursor: pointer; font-size: 13px; color: #1C1C1E;
+    margin: 0;
+    transition: background 0.15s, color 0.15s;
+  }
+  .checkbox-group label.on { background: #E63946; color: #fff; }
+  .checkbox-group input { display: none; }
+
+  /* ==========================================================
+   * EXPORT RENDER (官方健診表樣式)
+   * ========================================================== */
+  #export-canvas {
+    position: absolute; left: -99999px; top: 0;
+    width: 1100px;
+    background: linear-gradient(180deg, #E3F2FA 0%, #F0F7E8 100%);
+    padding: 24px 28px;
+    font-family: "PingFang TC", "Microsoft JhengHei", -apple-system, sans-serif;
+    color: #1C1C1E;
+  }
+  .ec-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .ec-brand { font-size: 22px; font-weight: 800; color: #E63946; letter-spacing: 2px; }
+  .ec-client { font-size: 13px; color: #1C1C1E; flex: 1; text-align: center; }
+  .ec-client b { color: #6C6C70; font-weight: normal; margin-right: 4px; }
+  .ec-client span { margin: 0 8px; }
+  .ec-title-pill {
+    background: linear-gradient(135deg, #FF8C42 0%, #F76707 100%);
+    color: #fff; padding: 8px 22px; border-radius: 20px;
+    font-size: 15px; font-weight: 700;
+    box-shadow: 0 2px 6px rgba(247,103,7,0.25);
+  }
+  .ec-banner-wrap { margin: 8px -28px 14px -28px; }
+  .ec-banner {
+    display: inline-block;
+    background: linear-gradient(135deg, #FF85A1 0%, #E64980 100%);
+    color: #fff; padding: 10px 32px 10px 28px; border-radius: 0 22px 22px 0;
+    font-size: 22px; font-weight: 800; letter-spacing: 1px;
+    box-shadow: 0 2px 8px rgba(230,73,128,0.25);
+  }
+  .ec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+  }
+  .ec-section {
+    background: #fff;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .ec-section-header {
+    color: #fff; padding: 7px 14px;
+    font-size: 14px; font-weight: 700;
+    display: flex; align-items: baseline; justify-content: space-between;
+  }
+  .ec-section-header .sub {
+    font-size: 11px; font-weight: 500; opacity: 0.95; margin-left: 8px;
+  }
+  .ec-section-body { padding: 6px 14px 10px; }
+  .ec-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 3px 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+  .ec-row.indent { padding-left: 24px; }
+  .ec-row .lbl { color: #1C1C1E; flex-shrink: 0; }
+  .ec-row .lbl .sub { color: #8E8E93; font-size: 11px; margin-left: 6px; }
+  .ec-row .dots {
+    flex: 1; border-bottom: 1px dotted #B0B0B0; margin: 0 6px; height: 1px; align-self: flex-end; margin-bottom: 4px;
+  }
+  .ec-row .val {
+    color: #1C1C1E; font-weight: 600; white-space: nowrap;
+  }
+  .ec-row .val.zero { color: #C7C7CC; font-weight: 500; }
+  .ec-row .unit { color: #8E8E93; font-size: 10.5px; font-weight: normal; margin-left: 3px; }
+  .ec-checkbox-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 3px 0; font-size: 12.5px;
+  }
+  .ec-checkbox-row .box {
+    width: 13px; height: 13px; border: 1.5px solid #6C6C70;
+    border-radius: 2px; display: inline-block;
+    position: relative; flex-shrink: 0;
+  }
+  .ec-checkbox-row .box.checked {
+    background: #E63946; border-color: #E63946;
+  }
+  .ec-checkbox-row .box.checked::after {
+    content: ''; position: absolute;
+    top: 1px; left: 4px; width: 3px; height: 7px;
+    border: solid #fff; border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+  .ec-disclaimer {
+    background: rgba(255,255,255,0.7); border-radius: 8px; padding: 8px 12px;
+    font-size: 11px; color: #6C6C70;
+    line-height: 1.6; margin-top: 8px;
+  }
+  .ec-disclaimer .item { display: block; }
+  .ec-footer {
+    margin-top: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: #6C6C70;
+    padding: 0 4px;
+  }
+</style>
+</head>
+<body>
+
+<header class="appbar">
+  <button class="icon-btn" id="back-btn" style="visibility:hidden;">‹ 返回</button>
+  <h1 id="header-title">保障健診</h1>
+  <button class="icon-btn" id="export-btn" style="visibility:hidden;">匯出</button>
+</header>
+
+<main>
+
+  <!-- ========== UPLOAD VIEW ========== -->
+  <section class="view active" id="view-upload">
+
+    <!-- API mode UI -->
+    <div id="api-mode-ui">
+      <div class="card">
+        <h2>上傳保障彙整表 (API 模式)</h2>
+        <p>選擇 PDF 後,Claude API 會自動解析並填入健診表。</p>
+        <div class="drop-zone" id="dropzone">
+          <div class="icon">📄</div>
+          <div class="title">點擊選取 PDF</div>
+          <div class="hint">支援保障彙整表</div>
+          <input type="file" id="file-input" accept="application/pdf" style="display:none">
+        </div>
+        <div id="file-info" style="display:none;"></div>
+        <button class="btn btn-primary" id="btn-analyze" style="margin-top:12px;display:none;">🤖 開始解析</button>
+      </div>
+
+      <div class="card" id="api-warning" style="display:none;">
+        <h2>⚠️ 尚未設定 API Key</h2>
+        <p>API 模式需要 Anthropic API Key。請到「設定」分頁輸入,或切換為「手動模式」(免 API Key,使用 Claude Pro)。</p>
+        <button class="btn btn-secondary" onclick="switchView('settings')">前往設定</button>
+      </div>
+    </div>
+
+    <!-- Manual mode UI -->
+    <div id="manual-mode-ui" style="display:none;">
+      <div class="card">
+        <h2>📋 手動模式 (使用 Claude Pro)</h2>
+        <p>三步驟完成,完全免費(用你既有的 Claude Pro 月費)。</p>
+
+        <div class="step">
+          <div class="num">1</div>
+          <div class="body">
+            <div class="title">複製提示詞</div>
+            <div class="desc">點下方按鈕複製,提示詞會自動帶上完整對應規則。</div>
+            <button class="btn btn-primary" id="btn-copy-prompt" style="margin-top:10px;">📋 複製提示詞</button>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">2</div>
+          <div class="body">
+            <div class="title">到 Claude.ai 解析</div>
+            <div class="desc">
+              開新對話 → 把保障彙整表 PDF 拖進去 → 貼上剛剛複製的提示詞 → 送出。<br>
+              完成後把 Claude 回覆的整段 JSON 複製起來。
+            </div>
+            <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-secondary" style="margin-top:10px;text-decoration:none;">🔗 開啟 Claude.ai</a>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="num">3</div>
+          <div class="body">
+            <div class="title">貼回 JSON 結果</div>
+            <div class="desc">把 Claude 回應的 JSON 整段貼到下方,點解析即可。</div>
+            <textarea id="manual-json-input" placeholder='例如:&#10;{&#10;  "client": { "name": "...", ... },&#10;  "majorIllness": { ... },&#10;  ...&#10;}' style="margin-top:10px;"></textarea>
+            <button class="btn btn-primary" id="btn-parse-manual" style="margin-top:10px;">✅ 解析並儲存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CHECKUP VIEW ========== -->
+  <section class="view" id="view-checkup">
+    <div id="checkup-content">
+      <div class="empty">
+        <div class="icon">📋</div>
+        <div>尚無解析結果</div>
+        <div style="font-size:13px;margin-top:6px;">請先到「上傳」分頁解析一份 PDF</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== HISTORY VIEW ========== -->
+  <section class="view" id="view-history">
+    <div id="history-content">
+      <div class="empty">
+        <div class="icon">📚</div>
+        <div>尚無歷史紀錄</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SETTINGS VIEW ========== -->
+  <section class="view" id="view-settings">
+
+    <div class="card">
+      <h2>解析模式</h2>
+      <div class="segment" id="mode-segment">
+        <label><input type="radio" name="mode" value="manual"><span>手動 (Claude Pro)</span></label>
+        <label><input type="radio" name="mode" value="api"><span>API 模式</span></label>
+      </div>
+      <div class="help-text">
+        手動模式:免 API Key,用你既有的 Claude Pro。<br>
+        API 模式:需 Anthropic API Key,自動化但每次使用約 NT$1~3。
+      </div>
+    </div>
+
+    <div class="card" id="api-settings" style="display:none;">
+      <h2>Anthropic API Key</h2>
+      <label>API Key (sk-ant-…)</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-..." autocomplete="off">
+      <div class="help-text">
+        從 <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a> 取得。儲存於本機 localStorage。
+      </div>
+      <label style="margin-top:12px;">模型</label>
+      <select id="model-select">
+        <option value="claude-sonnet-4-5">Claude Sonnet 4.5 (推薦)</option>
+        <option value="claude-opus-4-5">Claude Opus 4.5 (最高品質)</option>
+        <option value="claude-haiku-4-5">Claude Haiku 4.5 (最快/最便宜)</option>
+      </select>
+      <button class="btn btn-primary" id="btn-save-key" style="margin-top:12px;">儲存</button>
+    </div>
+
+    <div class="card">
+      <h2>顧問資料 (匯出時顯示)</h2>
+      <label>顧問姓名</label>
+      <input type="text" id="agent-name" placeholder="例: 陳希瑗">
+      <label style="margin-top:10px;">連絡電話</label>
+      <input type="tel" id="agent-phone" placeholder="例: 0920921902">
+      <button class="btn btn-primary" id="btn-save-agent" style="margin-top:12px;">儲存</button>
+    </div>
+
+    <div class="card">
+      <h2>資料管理</h2>
+      <button class="btn btn-danger" id="btn-clear-all">清除所有歷史紀錄</button>
+    </div>
+  </section>
+
+  <!-- ========== EXPORT VIEW ========== -->
+  <section class="view" id="view-export">
+    <div class="card">
+      <h2>勾選項目</h2>
+      <p>由顧問依保戶情況勾選,完成後再匯出。</p>
+
+      <label style="margin-top:8px;">保險雙十原則</label>
+      <div class="checkbox-group" id="cb-tenten">
+        <label><input type="checkbox" data-key="tenIncome"><span>年繳保費≤年收入1/10</span></label>
+        <label><input type="checkbox" data-key="tenLifeAmount"><span>壽險保額≥年收入10倍</span></label>
+      </div>
+
+      <label style="margin-top:14px;">家庭責任</label>
+      <div class="checkbox-group" id="cb-family">
+        <label><input type="checkbox" data-key="spouse"><span>配偶</span></label>
+        <label><input type="checkbox" data-key="children"><span>子女</span></label>
+        <label><input type="checkbox" data-key="parents"><span>父母</span></label>
+        <label><input type="checkbox" data-key="loan"><span>貸款</span></label>
+        <label><input type="checkbox" data-key="funeral"><span>喪葬費</span></label>
+      </div>
+
+      <label style="margin-top:14px;">豁免</label>
+      <div class="checkbox-group" id="cb-waiver">
+        <label><input type="checkbox" data-key="policyHolder"><span>要保人</span></label>
+        <label><input type="checkbox" data-key="insured"><span>被保人</span></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>輸出</h2>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-export-png">🖼️ 下載 PNG</button>
+        <button class="btn btn-secondary" id="btn-export-share">📤 分享</button>
+      </div>
+      <button class="btn btn-ghost" id="btn-export-print" style="margin-top:8px;">🖨️ 列印 / 存 PDF</button>
+      <div class="help-text">PNG 適合 LINE 傳給保戶。分享會打開 iOS 分享選單(可直接傳到 LINE / Mail)。</div>
+    </div>
+
+    <div class="card">
+      <h2>預覽</h2>
+      <div id="export-preview-wrap" style="overflow:auto;background:#EAF6FA;border-radius:8px;padding:0;"></div>
+    </div>
+  </section>
+
+</main>
+
+<nav class="tabbar">
+  <button data-view="upload" class="active"><span class="icon">📤</span><span>上傳</span></button>
+  <button data-view="checkup"><span class="icon">📋</span><span>健診表</span></button>
+  <button data-view="history"><span class="icon">📚</span><span>歷史</span></button>
+  <button data-view="settings"><span class="icon">⚙️</span><span>設定</span></button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <div class="spinner"></div>
+    <div id="overlay-text">解析中…</div>
+  </div>
+</div>
+
+<!-- Hidden render container for html2canvas -->
+<div id="export-canvas"></div>
+
+<script>
+/* ===========================================================
+ * 生涯健診表 Schema
+ * =========================================================== */
+const SCHEMA = {
+  majorIllness: {
+    label: '重大疾病', color: '#FF6B6B',
+    fields: [
+      { key: 'mildMI', label: '重大疾病', sublabel: '輕度', unit: '元/次' },
+      { key: 'severeMI', label: '', sublabel: '重度', unit: '元/次' },
+      { key: 'criticalIllness', label: '重大傷病保險金', unit: '元/次' },
+      { key: 'nursing', label: '看護/照護金', unit: '元/次' },
+      { key: 'specifiedIllness', label: '特定傷病保障', unit: '元/次' },
+    ]
+  },
+  cancer: {
+    label: '癌症醫療', subtitle: '等待期90天', color: '#FF922B',
+    fields: [
+      { key: 'cancerHosp', label: '住院醫療', unit: '元/次' },
+      { key: 'cancerDischarge', label: '出院補償金', unit: '元/次' },
+      { key: 'cancerSurgery', label: '癌症手術', unit: '元/次' },
+      { key: 'postSurgeryHosp', label: '術後住院治療', unit: '元/次' },
+      { key: 'firstCancerMild', label: '初次罹癌保險金', sublabel: '輕度', unit: '元' },
+      { key: 'firstCancerSevere', label: '', sublabel: '重度', unit: '元' },
+      { key: 'prosthetic', label: '義肢裝設(乙次)', unit: '元' },
+      { key: 'denture', label: '義齒裝設(乙次)', unit: '元' },
+      { key: 'boneMarrow', label: '骨髓移植(乙次)', unit: '元' },
+      { key: 'chemoRadiation', label: '化學/放射線治療', unit: '元/次' },
+      { key: 'targetedTherapy', label: '標靶治療', unit: '元/次' },
+      { key: 'incomeComp', label: '住院收入補償金', unit: '元/次' },
+      { key: 'noClaimReturn', label: '無理賠回饋保險金', unit: '元/次' },
+      { key: 'cancerDeath', label: '癌症身故金', unit: '萬' },
+    ]
+  },
+  longTermCare: {
+    label: '長期照護', color: '#51CF66',
+    fields: [
+      { key: 'ltcOnce', label: '長照復健保險金', sublabel: '一次', unit: '萬' },
+      { key: 'ltcInstallment', label: '', sublabel: '分期', unit: '萬' },
+    ]
+  },
+  hospitalization: {
+    label: '住院醫療', color: '#FAB005',
+    fields: [
+      { key: 'dailyBenefit', label: '住院日額保險金', unit: '元/日' },
+      { key: 'dischargeRecovery', label: '出院/住院療養', unit: '元/日' },
+      { key: 'icu', label: '加護病房', unit: '元/日' },
+      { key: 'preDuringHospOPD', label: '住院前後門診', unit: '元/次' },
+      { key: 'er', label: '急診保險金', unit: '元/次' },
+      { key: 'emergencyTransfer', label: '緊急轉送保險金', unit: '元/次' },
+    ]
+  },
+  life: {
+    label: '壽險', subtitle: '滿15足歲前身故者退還所繳保費+利息', color: '#A37D5C',
+    fields: [
+      { key: 'wholeLife', label: '終身', unit: '萬' },
+      { key: 'term', label: '定期', unit: '萬' },
+      { key: 'investment', label: '投資型保障', unit: '萬' },
+    ]
+  },
+  accident: {
+    label: '意外傷害', subtitle: '外來/突發/非由疾病所引起', color: '#F783AC',
+    fields: [
+      { key: 'accidentBenefit', label: '意外傷害保險金', unit: '元/次' },
+      { key: 'accidentRoom', label: '住院病房', unit: '元/日' },
+      { key: 'burns', label: '燒燙傷保險金', unit: '元/次' },
+      { key: 'accidentICU', label: '加護病房', unit: '元/日' },
+      { key: 'accidentHosp', label: '意外住院', unit: '元/日' },
+      { key: 'fracture', label: '骨折(依程度)', unit: '元' },
+      { key: 'dislocation', label: '脫臼手術(視部位)', unit: '元' },
+      { key: 'transportAccident', label: '水陸航空意外(身故)', unit: '萬' },
+      { key: 'accidentDeath', label: '意外身故金', unit: '萬' },
+      { key: 'accidentDisability', label: '意外失能', unit: '元' },
+    ]
+  },
+  retirement: {
+    label: '退休養老 / 教育基金', color: '#9775FA',
+    fields: [
+      { key: 'maturityLumpSum', label: '滿期金(單筆)', unit: '元' },
+      { key: 'annualReturn', label: '年還本金(多次)', unit: '元' },
+      { key: 'increasingType', label: '增額型(保價金)', unit: '元' },
+      { key: 'other', label: '其他', unit: '' },
+    ]
+  },
+  realExpense: {
+    label: '實支實付', subtitle: '補健保不足', color: '#4DABF7',
+    fields: [
+      { key: 'roomCompensation', label: '病房費用補償', unit: '元/日' },
+      { key: 'hospLimit', label: '住院醫療限額', unit: '元/次' },
+      { key: 'opdSurgeryLimit', label: '門診手術限額', unit: '元/次' },
+      { key: 'inpatientSurgeryLimit', label: '住院手術限額', unit: '元/次' },
+      { key: 'miscMedical', label: '醫療費用(雜項)', unit: '元' },
+    ]
+  },
+  surgery: {
+    label: '手術醫療', color: '#22B8CF',
+    fields: [
+      { key: 'opdSurgery', label: '門診手術', unit: '元/次' },
+      { key: 'inpatientSurgery', label: '住院手術', unit: '元/次' },
+      { key: 'majorSurgery', label: '重大手術', unit: '元/次' },
+      { key: 'specifiedSurgery', label: '特定手術', unit: '元/次' },
+      { key: 'surgeryNursing', label: '手術看護金', unit: '元/日' },
+      { key: 'homeCare', label: '居家療養金', unit: '元/日' },
+    ]
+  }
+};
+
+// 3-column layout for export
+const EXPORT_LAYOUT = {
+  col1: ['majorIllness', 'cancer', 'longTermCare'],
+  col2: ['hospitalization', 'life', 'accident', 'retirement'],
+  col3: ['realExpense', 'surgery'],
+};
+
+/* ===========================================================
+ * Build Claude prompt
+ * =========================================================== */
+function buildPrompt() {
+  return `你是專業的保險資料解析人員。請從這份保障彙整表 PDF 中,擷取保戶資訊並對應到「生涯健診表」schema。
+
+請僅回傳純 JSON,不加任何說明、前言或 markdown 標記(不要包 \`\`\`json):
+
+{
+  "client": {
+    "name": "保戶姓名",
+    "birthDate": "民國生日如 055/09/15",
+    "age": 60,
+    "gender": "男或女"
+  },
+  ${Object.entries(SCHEMA).map(([section, def]) =>
+    `"${section}": { ${def.fields.map(f => `"${f.key}": 0`).join(', ')} }`
+  ).join(',\n  ')}
+}
+
+對應規則:
+1. 所有金額為純數字(去掉逗號),找不到對應欄位填 0
+2. 單位為「萬」者(壽險、意外身故金、癌症身故金、長照、水陸航空意外)以萬為單位的數字,例如 100,000 元 = 10
+3. 單位為「元」或「元/日」「元/次」者,以元為單位的數字
+4. 若 PDF 顯示為範圍(如 2,000~3,000),取最高值
+5. 不確定時保守填 0,不要猜測
+
+對應提示(三商美邦保障彙整表 → 生涯健診表):
+- "一般身故終身保障" → life.wholeLife (轉萬)
+- "意外身故保障" → accident.accidentDeath (轉萬)
+- "癌症身故保障" → cancer.cancerDeath (轉萬)
+- "住院日額(每日)【A】" 疾病段 → hospitalization.dailyBenefit
+- "加護病房(每日)" 疾病段 → hospitalization.icu
+- "出院/住院療養金(每日)" → hospitalization.dischargeRecovery
+- "住院前後門診" → hospitalization.preDuringHospOPD
+- "急診保險金" → hospitalization.er
+- "緊急轉送保險金" → hospitalization.emergencyTransfer
+- "住院日額(每日)【C】" 意外段 → accident.accidentHosp
+- "加護病房(每日)" 意外段 → accident.accidentICU
+- "燒燙傷病房(每日)" / "重大燒燙傷" → accident.burns 取較高
+- "骨折/骨折未住院" → accident.fracture
+- "水陸航空身故保險金" → accident.transportAccident (轉萬)
+- "住院手術" 定額 → surgery.inpatientSurgery
+- "特定/重大手術" → surgery.majorSurgery
+- "門診手術" → surgery.opdSurgery
+- "住院醫療限額(每日)【B】" → realExpense.roomCompensation
+- "醫院雜費限額" → realExpense.miscMedical
+- "住院手術限額" → realExpense.inpatientSurgeryLimit
+- "門診手術限額" → realExpense.opdSurgeryLimit
+- 癌症相關欄位 → cancer.* 對應欄位
+- "重大疾病保險金(一次)" → majorIllness.severeMI
+- "輕度重大疾病(一次)" → majorIllness.mildMI
+- "重大傷病保險金(一次)" → majorIllness.criticalIllness
+- "看護/照顧保險金(一次)" → majorIllness.nursing
+- "特定傷病保險金(一次)" → majorIllness.specifiedIllness
+
+僅回傳 JSON,不要任何說明文字。`;
+}
+
+/* ===========================================================
+ * IndexedDB
+ * =========================================================== */
+const DB_NAME = 'insurance-pwa';
+const STORE = 'analyses';
+let dbPromise;
+
+function openDB() {
+  if (dbPromise) return dbPromise;
+  dbPromise = new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, 1);
+    req.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: 'id' });
+      }
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+  return dbPromise;
+}
+
+async function saveAnalysis(record) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).put(record);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function getAllAnalyses() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readonly');
+    const req = tx.objectStore(STORE).getAll();
+    req.onsuccess = () => resolve(req.result.sort((a, b) => b.id - a.id));
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteAnalysis(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function clearAll() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE, 'readwrite');
+    tx.objectStore(STORE).clear();
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+/* ===========================================================
+ * Claude API (API mode)
+ * =========================================================== */
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(',')[1]);
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(file);
+  });
+}
+
+async function callClaude(pdfBase64) {
+  const apiKey = localStorage.getItem('anthropic_api_key');
+  const model = localStorage.getItem('model') || 'claude-sonnet-4-5';
+  if (!apiKey) throw new Error('尚未設定 API Key');
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 4096,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: pdfBase64 } },
+          { type: 'text', text: buildPrompt() }
+        ]
+      }]
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`API 錯誤 ${res.status}: ${err.slice(0, 200)}`);
+  }
+
+  const data = await res.json();
+  const text = data.content.filter(b => b.type === 'text').map(b => b.text).join('');
+  return parseJsonResponse(text);
+}
+
+function parseJsonResponse(text) {
+  const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) return JSON.parse(m[0]);
+    throw new Error('無法解析 JSON,請確認貼入的內容是 Claude 回傳的完整 JSON');
+  }
+}
+
+/* ===========================================================
+ * UI Render — In-app card view
+ * =========================================================== */
+function fmtNum(n) {
+  if (n == null || n === 0 || n === '0') return '0';
+  if (typeof n === 'string') return n;
+  return n.toLocaleString('zh-TW');
+}
+
+function renderCheckup(data) {
+  if (!data || !data.client) {
+    return `<div class="empty"><div class="icon">📋</div><div>尚無解析結果</div></div>`;
+  }
+  const c = data.client;
+  let html = `
+    <div class="client-card">
+      <div class="name">${c.name || '-'}</div>
+      <div class="meta">生日 ${c.birthDate || '-'} · ${c.age ?? '-'}歲 · ${c.gender || '-'}</div>
+    </div>
+  `;
+  for (const [section, def] of Object.entries(SCHEMA)) {
+    const sectionData = data[section] || {};
+    html += `
+      <div class="section">
+        <div class="section-header" style="background:${def.color}">
+          <span>${def.label}${def.subtitle ? ` <span style="font-size:11px;opacity:0.85;">(${def.subtitle})</span>` : ''}</span>
+        </div>
+        <div class="section-body">
+          ${def.fields.map(f => {
+            const v = sectionData[f.key] ?? 0;
+            const isZero = !v || v === 0;
+            const lblHtml = f.label
+              ? f.label + (f.sublabel ? `<span style="color:#8E8E93;font-size:13px;margin-left:8px;">${f.sublabel}</span>` : '')
+              : `<span style="margin-left:24px;color:#8E8E93;font-size:13px;">${f.sublabel || ''}</span>`;
+            return `
+              <div class="field">
+                <div class="label">${lblHtml}</div>
+                <div class="value ${isZero ? 'zero' : ''}">${fmtNum(v)}<span class="unit">${f.unit}</span></div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+  return html;
+}
+
+function renderHistory(items) {
+  if (!items.length) {
+    return `<div class="empty"><div class="icon">📚</div><div>尚無歷史紀錄</div></div>`;
+  }
+  return items.map(item => `
+    <div class="history-item" data-id="${item.id}">
+      <div class="info">
+        <div class="name">${item.data?.client?.name || '未知保戶'}</div>
+        <div class="date">${new Date(item.id).toLocaleString('zh-TW')} · ${item.fileName || ''}</div>
+      </div>
+      <button class="delete" data-delete="${item.id}">刪除</button>
+    </div>
+  `).join('');
+}
+
+/* ===========================================================
+ * Export render (官方版健診表)
+ * =========================================================== */
+function renderExportSection(sectionKey, data) {
+  const def = SCHEMA[sectionKey];
+  const sectionData = data[sectionKey] || {};
+  const rows = def.fields.map(f => {
+    const v = sectionData[f.key] ?? 0;
+    const isZero = !v || v === 0;
+    if (!f.label && f.sublabel) {
+      // Indented sub-row (continuation of previous label)
+      return `
+        <div class="ec-row indent">
+          <span class="lbl">${f.sublabel}</span>
+          <span class="dots"></span>
+          <span class="val ${isZero ? 'zero' : ''}">${fmtNum(v)}<span class="unit">${f.unit}</span></span>
+        </div>
+      `;
+    }
+    const sub = f.sublabel ? `<span class="sub">${f.sublabel}</span>` : '';
+    return `
+      <div class="ec-row">
+        <span class="lbl">${f.label}${sub}</span>
+        <span class="dots"></span>
+        <span class="val ${isZero ? 'zero' : ''}">${fmtNum(v)}<span class="unit">${f.unit}</span></span>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="ec-section">
+      <div class="ec-section-header" style="background:${def.color};">
+        <span>${def.label}${def.subtitle ? ` <span class="sub">${def.subtitle}</span>` : ''}</span>
+      </div>
+      <div class="ec-section-body">${rows}</div>
+    </div>
+  `;
+}
+
+function renderSpecialBlocks(checks) {
+  return `
+    <div class="ec-section">
+      <div class="ec-section-header" style="background:#495057;"><span>保險雙十原則</span></div>
+      <div class="ec-section-body">
+        <div class="ec-checkbox-row"><span class="box ${checks.tenIncome ? 'checked' : ''}"></span>年繳保費不超過年收入的十分之一</div>
+        <div class="ec-checkbox-row"><span class="box ${checks.tenLifeAmount ? 'checked' : ''}"></span>壽險保額至少為年收入的十倍</div>
+      </div>
+    </div>
+    <div class="ec-section">
+      <div class="ec-section-header" style="background:#6C757D;"><span>家庭責任</span></div>
+      <div class="ec-section-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 8px;">
+          <div class="ec-checkbox-row"><span class="box ${checks.spouse ? 'checked' : ''}"></span>配偶</div>
+          <div class="ec-checkbox-row"><span class="box ${checks.children ? 'checked' : ''}"></span>子女</div>
+          <div class="ec-checkbox-row"><span class="box ${checks.parents ? 'checked' : ''}"></span>父母</div>
+          <div class="ec-checkbox-row"><span class="box ${checks.loan ? 'checked' : ''}"></span>貸款</div>
+          <div class="ec-checkbox-row"><span class="box ${checks.funeral ? 'checked' : ''}"></span>喪葬費</div>
+        </div>
+      </div>
+    </div>
+    <div class="ec-section">
+      <div class="ec-section-header" style="background:#495057;"><span>豁免</span></div>
+      <div class="ec-section-body">
+        <div class="ec-checkbox-row"><span class="box ${checks.policyHolder ? 'checked' : ''}"></span>要保人</div>
+        <div style="font-size:10px;color:#8E8E93;line-height:1.5;margin:2px 0 8px 22px;">
+          要保人身故/全殘/罹患重大疾病或因意外、疾病致1-6級殘廢,重大燒燙傷;或重大疾病中的癱瘓與重大器官移植等,主、附約保費全部豁免。
+        </div>
+        <div class="ec-checkbox-row"><span class="box ${checks.insured ? 'checked' : ''}"></span>被保人</div>
+        <div style="font-size:10px;color:#8E8E93;line-height:1.5;margin:2px 0 0 22px;">
+          被保險人係因罹患重大疾病或因疾病、意外造成2-6級殘廢時,主、附約保費全部豁免。
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderExportCanvas(data, checks) {
+  const c = data.client || {};
+  const agentName = localStorage.getItem('agent_name') || '';
+  const agentPhone = localStorage.getItem('agent_phone') || '';
+  const today = new Date();
+  const rocYear = today.getFullYear() - 1911;
+  const dateStr = `${rocYear}/${String(today.getMonth()+1).padStart(2,'0')}/${String(today.getDate()).padStart(2,'0')}`;
+
+  return `
+    <div class="ec-header">
+      <div class="ec-brand">保障健診</div>
+      <div class="ec-client">
+        <span><b>客戶</b>${c.name || '-'}</span>
+        <span><b>生日</b>${c.birthDate || '-'}</span>
+        <span><b>年齡</b>${c.age ?? '-'}</span>
+        <span><b>性別</b>${c.gender || '-'}</span>
+      </div>
+      <div class="ec-title-pill">生涯健診表</div>
+    </div>
+
+    <div class="ec-banner-wrap"><div class="ec-banner">您的保障完整嗎?</div></div>
+
+    <div class="ec-grid">
+      <div>${EXPORT_LAYOUT.col1.map(k => renderExportSection(k, data)).join('')}</div>
+      <div>${EXPORT_LAYOUT.col2.map(k => renderExportSection(k, data)).join('')}</div>
+      <div>${EXPORT_LAYOUT.col3.map(k => renderExportSection(k, data)).join('')}${renderSpecialBlocks(checks)}</div>
+    </div>
+
+    <div class="ec-disclaimer">
+      <span class="item">▸ 資料僅供參考,詳細內容需以保單之契約條款為準。</span>
+      <span class="item">▸ 投資型保單、利率型壽險、萬能壽險保單險種以(基本)保額計入。</span>
+      <span class="item" style="margin-top:4px;">內容僅供參考,實際應繳保費、解約或理賠金額仍以個案申請後保險公司審理結果為主,如有疑慮並應以各商品之保單條款與契約內容為準。</span>
+    </div>
+
+    <div class="ec-footer">
+      <span>製表日期: ${dateStr}</span>
+      <span>${agentName ? `專業顧問 ${agentName}` : ''}${agentPhone ? `　　連絡電話 ${agentPhone}` : ''}</span>
+    </div>
+  `;
+}
+
+/* ===========================================================
+ * State & navigation
+ * =========================================================== */
+let currentFile = null;
+let currentData = null;
+let currentRecordId = null;
+let currentChecks = {};
+
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const target = document.getElementById('view-' + name);
+  if (target) target.classList.add('active');
+  document.querySelectorAll('nav.tabbar button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === name);
+  });
+
+  const tabbar = document.querySelector('nav.tabbar');
+  const backBtn = document.getElementById('back-btn');
+  const exportBtn = document.getElementById('export-btn');
+  const headerTitle = document.getElementById('header-title');
+
+  if (name === 'export') {
+    tabbar.style.display = 'none';
+    backBtn.style.visibility = 'visible';
+    exportBtn.style.visibility = 'hidden';
+    headerTitle.textContent = '匯出健診表';
+    setTimeout(refreshExportPreview, 50);
+  } else if (name === 'checkup' && currentData) {
+    tabbar.style.display = 'flex';
+    backBtn.style.visibility = 'hidden';
+    exportBtn.style.visibility = 'visible';
+    headerTitle.textContent = '保障健診';
+  } else {
+    tabbar.style.display = 'flex';
+    backBtn.style.visibility = 'hidden';
+    exportBtn.style.visibility = 'hidden';
+    headerTitle.textContent = '保障健診';
+  }
+
+  if (name === 'history') refreshHistory();
+}
+
+function toast(msg, ms = 2200) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), ms);
+}
+
+function showOverlay(text = '解析中…') {
+  document.getElementById('overlay-text').textContent = text;
+  document.getElementById('overlay').classList.add('show');
+}
+function hideOverlay() {
+  document.getElementById('overlay').classList.remove('show');
+}
+
+async function refreshHistory() {
+  const items = await getAllAnalyses();
+  document.getElementById('history-content').innerHTML = renderHistory(items);
+}
+
+function setMode(mode) {
+  localStorage.setItem('parse_mode', mode);
+  document.getElementById('api-mode-ui').style.display = mode === 'api' ? 'block' : 'none';
+  document.getElementById('manual-mode-ui').style.display = mode === 'manual' ? 'block' : 'none';
+  document.getElementById('api-settings').style.display = mode === 'api' ? 'block' : 'none';
+  document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = r.value === mode);
+}
+
+async function applyAnalysis(data, fileName) {
+  currentData = data;
+  currentChecks = {};
+  const record = {
+    id: currentRecordId || Date.now(),
+    fileName: fileName || '手動貼入',
+    data,
+    checks: currentChecks
+  };
+  await saveAnalysis(record);
+  currentRecordId = record.id;
+  document.getElementById('checkup-content').innerHTML = renderCheckup(data);
+  switchView('checkup');
+  toast('解析完成,可點右上角「匯出」分享給保戶');
+}
+
+function refreshExportPreview() {
+  if (!currentData) return;
+  const wrap = document.getElementById('export-preview-wrap');
+  const canvas = document.getElementById('export-canvas');
+  canvas.innerHTML = renderExportCanvas(currentData, currentChecks);
+
+  // Build a scaled preview clone visible in wrap
+  wrap.innerHTML = '';
+  const wrapWidth = wrap.clientWidth || 320;
+  const scale = Math.min(1, wrapWidth / 1100);
+
+  const previewHost = document.createElement('div');
+  previewHost.style.cssText = `width:${wrapWidth}px;overflow:hidden;`;
+  const previewInner = document.createElement('div');
+  previewInner.style.cssText = `width:1100px;transform:scale(${scale});transform-origin:top left;`;
+  previewInner.innerHTML = `<div id="preview-canvas" style="background:linear-gradient(180deg, #E3F2FA 0%, #F0F7E8 100%);padding:24px 28px;font-family:'PingFang TC','Microsoft JhengHei',-apple-system,sans-serif;">${renderExportCanvas(currentData, currentChecks)}</div>`;
+  previewHost.appendChild(previewInner);
+  wrap.appendChild(previewHost);
+
+  // Set wrap height after the inner renders
+  setTimeout(() => {
+    const naturalHeight = previewInner.firstChild.scrollHeight;
+    previewHost.style.height = (naturalHeight * scale) + 'px';
+  }, 100);
+}
+
+/* ===========================================================
+ * Event handlers
+ * =========================================================== */
+document.querySelectorAll('nav.tabbar button').forEach(btn => {
+  btn.addEventListener('click', () => switchView(btn.dataset.view));
+});
+
+document.getElementById('back-btn').addEventListener('click', () => switchView('checkup'));
+
+document.getElementById('export-btn').addEventListener('click', () => {
+  if (!currentData) { toast('請先解析一份保單'); return; }
+  if (typeof html2canvas === 'undefined') {
+    toast('html2canvas 載入中,請稍候再試…', 3000);
+    return;
+  }
+  document.querySelectorAll('#cb-tenten input, #cb-family input, #cb-waiver input').forEach(cb => {
+    cb.checked = !!currentChecks[cb.dataset.key];
+    cb.parentElement.classList.toggle('on', cb.checked);
+  });
+  switchView('export');
+});
+
+document.querySelectorAll('#cb-tenten input, #cb-family input, #cb-waiver input').forEach(cb => {
+  cb.addEventListener('change', () => {
+    cb.parentElement.classList.toggle('on', cb.checked);
+    currentChecks[cb.dataset.key] = cb.checked;
+    refreshExportPreview();
+    if (currentRecordId) {
+      saveAnalysis({
+        id: currentRecordId,
+        fileName: '(更新勾選)',
+        data: currentData,
+        checks: currentChecks
+      });
+    }
+  });
+});
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('file-input');
+dropzone.addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  if (f.type !== 'application/pdf') { toast('請選擇 PDF 檔案'); return; }
+  currentFile = f;
+  document.getElementById('file-info').style.display = 'block';
+  document.getElementById('file-info').innerHTML = `
+    <div class="file-info">
+      <span style="font-size:24px;">📄</span>
+      <div class="name">${f.name}</div>
+      <div class="size">${(f.size / 1024).toFixed(0)} KB</div>
+    </div>
+  `;
+  document.getElementById('btn-analyze').style.display = 'flex';
+});
+
+document.getElementById('btn-analyze').addEventListener('click', async () => {
+  if (!currentFile) return;
+  if (!localStorage.getItem('anthropic_api_key')) {
+    document.getElementById('api-warning').style.display = 'block';
+    toast('請先設定 API Key');
+    return;
+  }
+  currentRecordId = null;
+  showOverlay('上傳並解析中…');
+  try {
+    const base64 = await fileToBase64(currentFile);
+    const data = await callClaude(base64);
+    hideOverlay();
+    await applyAnalysis(data, currentFile.name);
+  } catch (err) {
+    hideOverlay();
+    console.error(err);
+    toast('解析失敗: ' + err.message, 4000);
+  }
+});
+
+document.getElementById('btn-copy-prompt').addEventListener('click', async () => {
+  const prompt = buildPrompt();
+  try {
+    await navigator.clipboard.writeText(prompt);
+    toast('提示詞已複製。請開啟 claude.ai 上傳 PDF + 貼上提示詞');
+  } catch (e) {
+    const ta = document.getElementById('manual-json-input');
+    ta.value = prompt;
+    ta.select();
+    toast('複製失敗,請手動從文字框複製');
+  }
+});
+
+document.getElementById('btn-parse-manual').addEventListener('click', async () => {
+  const text = document.getElementById('manual-json-input').value.trim();
+  if (!text) { toast('請先貼上 Claude 回應的 JSON'); return; }
+  try {
+    const data = parseJsonResponse(text);
+    if (!data.client) throw new Error('JSON 缺少 client 欄位');
+    currentRecordId = null;
+    await applyAnalysis(data, '手動貼入');
+    document.getElementById('manual-json-input').value = '';
+  } catch (err) {
+    toast('解析失敗: ' + err.message, 4000);
+  }
+});
+
+document.getElementById('mode-segment').addEventListener('change', (e) => {
+  if (e.target.name === 'mode') {
+    setMode(e.target.value);
+    toast(e.target.value === 'manual' ? '已切換至手動模式' : '已切換至 API 模式');
+  }
+});
+
+document.getElementById('btn-save-key').addEventListener('click', () => {
+  const key = document.getElementById('api-key-input').value.trim();
+  const model = document.getElementById('model-select').value;
+  if (!key) { toast('請輸入 API Key'); return; }
+  if (!key.startsWith('sk-ant-')) { toast('API Key 格式不正確'); return; }
+  localStorage.setItem('anthropic_api_key', key);
+  localStorage.setItem('model', model);
+  toast('已儲存');
+});
+
+document.getElementById('model-select').addEventListener('change', (e) => {
+  localStorage.setItem('model', e.target.value);
+});
+
+document.getElementById('btn-save-agent').addEventListener('click', () => {
+  localStorage.setItem('agent_name', document.getElementById('agent-name').value.trim());
+  localStorage.setItem('agent_phone', document.getElementById('agent-phone').value.trim());
+  toast('已儲存');
+});
+
+document.getElementById('btn-clear-all').addEventListener('click', async () => {
+  if (!confirm('確定要清除所有歷史紀錄?此操作無法復原。')) return;
+  await clearAll();
+  toast('已清除');
+  refreshHistory();
+});
+
+document.getElementById('history-content').addEventListener('click', async (e) => {
+  const delBtn = e.target.closest('[data-delete]');
+  if (delBtn) {
+    e.stopPropagation();
+    const id = Number(delBtn.dataset.delete);
+    if (confirm('確定刪除這筆紀錄?')) {
+      await deleteAnalysis(id);
+      refreshHistory();
+    }
+    return;
+  }
+  const item = e.target.closest('.history-item');
+  if (item) {
+    const id = Number(item.dataset.id);
+    const all = await getAllAnalyses();
+    const rec = all.find(x => x.id === id);
+    if (rec) {
+      currentData = rec.data;
+      currentChecks = rec.checks || {};
+      currentRecordId = rec.id;
+      document.getElementById('checkup-content').innerHTML = renderCheckup(rec.data);
+      switchView('checkup');
+    }
+  }
+});
+
+/* ===========================================================
+ * Export to PNG / Print / Share
+ * =========================================================== */
+async function captureCanvas() {
+  const canvas = document.getElementById('export-canvas');
+  canvas.innerHTML = renderExportCanvas(currentData, currentChecks);
+  // Bring on-screen but invisible to user (off-viewport)
+  canvas.style.left = '-99999px';
+  canvas.style.top = '0';
+  await new Promise(r => setTimeout(r, 100));
+  return await html2canvas(canvas, {
+    scale: 2,
+    backgroundColor: null,
+    useCORS: true,
+    logging: false,
+    width: 1100,
+    windowWidth: 1100
+  });
+}
+
+document.getElementById('btn-export-png').addEventListener('click', async () => {
+  if (!currentData) return;
+  showOverlay('產生 PNG 中…');
+  try {
+    const canvas = await captureCanvas();
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const name = (currentData.client?.name || 'client').replace(/[^\w\u4e00-\u9fa5]/g, '');
+    a.href = url;
+    a.download = `保障健診表_${name}_${Date.now()}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    hideOverlay();
+    toast('已下載 PNG');
+  } catch (err) {
+    hideOverlay();
+    console.error(err);
+    toast('產生失敗: ' + err.message, 4000);
+  }
+});
+
+document.getElementById('btn-export-share').addEventListener('click', async () => {
+  if (!currentData) return;
+  if (!navigator.share) {
+    toast('此瀏覽器不支援分享,請改用「下載 PNG」', 3000);
+    return;
+  }
+  showOverlay('準備分享…');
+  try {
+    const canvas = await captureCanvas();
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    const name = (currentData.client?.name || 'client').replace(/[^\w\u4e00-\u9fa5]/g, '');
+    const file = new File([blob], `保障健診表_${name}.png`, { type: 'image/png' });
+    hideOverlay();
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        title: '保障健診表',
+        text: `${currentData.client?.name || ''} 的保障健診表`
+      });
+    } else {
+      toast('此裝置不支援分享圖片,請改用下載');
+    }
+  } catch (err) {
+    hideOverlay();
+    if (err.name !== 'AbortError') {
+      console.error(err);
+      toast('分享失敗: ' + err.message, 4000);
+    }
+  }
+});
+
+document.getElementById('btn-export-print').addEventListener('click', () => {
+  if (!currentData) return;
+  const html = renderExportCanvas(currentData, currentChecks);
+  const styleEl = document.querySelector('style');
+  const printWin = window.open('', '_blank');
+  if (!printWin) { toast('無法開啟列印視窗,請允許彈出視窗'); return; }
+  printWin.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>保障健診表</title>
+<style>
+${styleEl.innerHTML}
+body { margin: 0; }
+#export-canvas { position: static !important; left: 0 !important; }
+@media print {
+  body { background: #fff; }
+  #export-canvas { background: #fff !important; padding: 8mm; }
+  @page { size: A4 landscape; margin: 5mm; }
+}
+</style>
+</head><body><div id="export-canvas">${html}</div>
+<script>setTimeout(() => window.print(), 400);<\/script>
+</body></html>`);
+  printWin.document.close();
+});
+
+/* ===========================================================
+ * Init
+ * =========================================================== */
+function init() {
+  const mode = localStorage.getItem('parse_mode') || 'manual';  // default: manual (free)
+  setMode(mode);
+
+  const savedKey = localStorage.getItem('anthropic_api_key');
+  if (savedKey) document.getElementById('api-key-input').value = savedKey;
+  if (mode === 'api' && !savedKey) {
+    document.getElementById('api-warning').style.display = 'block';
+  }
+  document.getElementById('model-select').value = localStorage.getItem('model') || 'claude-sonnet-4-5';
+  document.getElementById('agent-name').value = localStorage.getItem('agent_name') || '';
+  document.getElementById('agent-phone').value = localStorage.getItem('agent_phone') || '';
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  }
+}
+
+init();
+</script>
+</body>
+</html>
