@@ -518,7 +518,9 @@
 
     <div class="card">
       <h2>資料管理</h2>
-      <button class="btn btn-danger" id="btn-clear-all">清除所有歷史紀錄</button>
+      <button class="btn btn-ghost" id="btn-force-reload">🔄 清除快取並重新載入</button>
+      <div class="help-text">遇到卡在舊版時使用。不會刪除已儲存的健診紀錄。</div>
+      <button class="btn btn-danger" id="btn-clear-all" style="margin-top:12px;">清除所有歷史紀錄</button>
     </div>
   </section>
 
@@ -1310,6 +1312,34 @@ document.getElementById('btn-clear-all').addEventListener('click', async () => {
   await clearAll();
   toast('已清除');
   refreshHistory();
+});
+
+document.getElementById('btn-force-reload').addEventListener('click', async () => {
+  if (!confirm('將清除網頁快取並重新載入。\n(不會刪除已儲存的健診紀錄)')) return;
+  showOverlay('清除快取中…');
+  try {
+    // Unregister all service workers
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.unregister()));
+    }
+    // Clear all cache storage
+    if ('caches' in window) {
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+    }
+    // Bypass HTTP cache and reload
+    setTimeout(() => {
+      // location.reload(true) is deprecated but still works on some browsers
+      // Force fresh fetch by appending cache-buster
+      const url = new URL(window.location.href);
+      url.searchParams.set('_t', Date.now());
+      window.location.replace(url.toString());
+    }, 300);
+  } catch (err) {
+    hideOverlay();
+    toast('清除失敗: ' + err.message, 4000);
+  }
 });
 
 document.getElementById('history-content').addEventListener('click', async (e) => {
