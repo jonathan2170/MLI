@@ -450,7 +450,7 @@
           <div class="body">
             <div class="title">貼回 JSON 結果</div>
             <div class="desc">把 Claude 回應的 JSON 整段貼到下方,點解析即可。</div>
-            <textarea id="manual-json-input" placeholder='例如:&#10;{&#10;  "client": { "name": "...", ... },&#10;  "majorIllness": { ... },&#10;  ...&#10;}' style="margin-top:10px;"></textarea>
+            <textarea id="manual-json-input" autocorrect="off" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder='例如:&#10;{&#10;  "client": { "name": "...", ... },&#10;  "majorIllness": { ... },&#10;  ...&#10;}' style="margin-top:10px;"></textarea>
             <button class="btn btn-primary" id="btn-parse-manual" style="margin-top:10px;">✅ 解析並儲存</button>
           </div>
         </div>
@@ -877,13 +877,24 @@ async function callClaude(pdfBase64) {
 }
 
 function parseJsonResponse(text) {
-  const cleaned = text.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
+  // Normalize smart/curly quotes that iOS or Claude might insert
+  // " " „ ‟ ″ ‶ → "
+  // ' ' ‚ ‛ ′ ‵ → '
+  // Also normalize non-breaking spaces
+  let cleaned = text
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+    .replace(/\u00A0/g, ' ');
+  // Strip markdown code fences
+  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/```\s*$/, '').trim();
   try {
     return JSON.parse(cleaned);
   } catch (e) {
     const m = cleaned.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]);
-    throw new Error('無法解析 JSON,請確認貼入的內容是 Claude 回傳的完整 JSON');
+    if (m) {
+      try { return JSON.parse(m[0]); } catch (e2) { throw new Error(e2.message); }
+    }
+    throw new Error(e.message);
   }
 }
 

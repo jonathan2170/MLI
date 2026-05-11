@@ -4,7 +4,7 @@
 //   - Static assets (icons, manifest): cache-first (fast + offline)
 //   - Anthropic API: bypass entirely
 // Bump CACHE version when shipping a breaking update.
-const CACHE = 'baozhang-v4';
+const CACHE = 'baozhang-v5';
 const ASSETS = [
   './',
   './index.html',
