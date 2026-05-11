@@ -378,6 +378,43 @@
     font-size: 11px; color: #6C6C70;
     padding: 0 4px;
   }
+
+  /* ==========================================================
+   * PRINT: A4 portrait, scale 1100px design to fit
+   * ========================================================== */
+  @media print {
+    @page { size: A4 portrait; margin: 6mm; }
+
+    html, body {
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #fff !important;
+    }
+
+    /* Hide every top-level child except the export canvas */
+    body > *:not(#export-canvas) { display: none !important; }
+
+    /* Bring export canvas on-screen at full size, scaled to fit A4 portrait */
+    #export-canvas {
+      position: static !important;
+      left: auto !important;
+      top: auto !important;
+      width: 1100px !important;
+      background: #fff !important;
+      padding: 0 !important;
+      /* 1100px * 0.65 ≈ 715px ≈ 189mm, fits within A4 portrait inner 198mm */
+      zoom: 0.65;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    /* Ensure colored headers, banner, checkmarks all print */
+    .ec-section-header, .ec-banner, .ec-title-pill,
+    .ec-checkbox-row .box.checked, .ec-brand {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1459,26 +1496,14 @@ document.getElementById('btn-export-share').addEventListener('click', async () =
 
 document.getElementById('btn-export-print').addEventListener('click', () => {
   if (!currentData) return;
-  const html = renderExportCanvas(currentData, currentChecks);
-  const styleEl = document.querySelector('style');
-  const printWin = window.open('', '_blank');
-  if (!printWin) { toast('無法開啟列印視窗,請允許彈出視窗'); return; }
-  printWin.document.write(`<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>保障健診表</title>
-<style>
-${styleEl.innerHTML}
-body { margin: 0; }
-#export-canvas { position: static !important; left: 0 !important; }
-@media print {
-  body { background: #fff; }
-  #export-canvas { background: #fff !important; padding: 8mm; }
-  @page { size: A4 landscape; margin: 5mm; }
-}
-</style>
-</head><body><div id="export-canvas">${html}</div>
-<script>setTimeout(() => window.print(), 400);<\/script>
-</body></html>`);
-  printWin.document.close();
+  // Render the export canvas with current data, then trigger native print.
+  // @media print CSS hides everything else and scales the canvas to A4 portrait.
+  const canvas = document.getElementById('export-canvas');
+  canvas.innerHTML = renderExportCanvas(currentData, currentChecks);
+  // Small delay so layout settles before print dialog
+  setTimeout(() => {
+    window.print();
+  }, 150);
 });
 
 /* ===========================================================
