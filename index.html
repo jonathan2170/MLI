@@ -455,10 +455,18 @@
     <!-- Manual mode UI -->
     <div id="manual-mode-ui" style="display:none;">
       <div class="card">
-        <h2>📋 手動模式 (使用 Claude Pro)</h2>
-        <p>三步驟完成,完全免費(用你既有的 Claude Pro 月費)。</p>
+        <h2>📋 手動模式</h2>
+        <p>三步驟完成,完全免費(用你既有的 AI 訂閱)。</p>
 
-        <div class="step">
+        <label style="margin-top:8px;">AI 平台</label>
+        <div class="segment" id="platform-segment">
+          <label><input type="radio" name="platform" value="claude"><span>Claude</span></label>
+          <label><input type="radio" name="platform" value="gemini"><span>Gemini</span></label>
+          <label><input type="radio" name="platform" value="chatgpt"><span>ChatGPT</span></label>
+        </div>
+        <div class="help-text" id="platform-hint"></div>
+
+        <div class="step" style="margin-top:14px;">
           <div class="num">1</div>
           <div class="body">
             <div class="title">複製提示詞</div>
@@ -470,15 +478,12 @@
         <div class="step">
           <div class="num">2</div>
           <div class="body">
-            <div class="title">到 Claude.ai 解析</div>
+            <div class="title">到 <span id="step2-platform-name">Claude</span> 解析</div>
             <div class="desc">
               開新對話 → 把保障彙整表 PDF 拖進去 → 貼上剛剛複製的提示詞 → 送出。<br>
-              完成後把 Claude 回覆的整段 JSON 複製起來。
+              完成後把回應的整段 JSON 複製起來。
             </div>
-            <div class="btn-row" style="margin-top:10px;">
-              <a href="claude://" class="btn btn-secondary" id="btn-open-app" style="text-decoration:none;">📱 開啟 App</a>
-              <a href="https://claude.ai/new" target="_blank" rel="noopener" class="btn btn-ghost" style="text-decoration:none;">🌐 網頁版</a>
-            </div>
+            <div id="step2-buttons" style="margin-top:10px;"></div>
           </div>
         </div>
 
@@ -486,7 +491,7 @@
           <div class="num">3</div>
           <div class="body">
             <div class="title">貼回 JSON 結果</div>
-            <div class="desc">把 Claude 回應的 JSON 整段貼到下方,點解析即可。</div>
+            <div class="desc">把回應的 JSON 整段貼到下方,點解析即可。</div>
             <textarea id="manual-json-input" autocorrect="off" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder='例如:&#10;{&#10;  "client": { "name": "...", ... },&#10;  "majorIllness": { ... },&#10;  ...&#10;}' style="margin-top:10px;"></textarea>
             <button class="btn btn-primary" id="btn-parse-manual" style="margin-top:10px;">✅ 解析並儲存</button>
           </div>
@@ -1184,6 +1189,48 @@ function setMode(mode) {
   document.querySelectorAll('input[name="mode"]').forEach(r => r.checked = r.value === mode);
 }
 
+const PLATFORMS = {
+  claude: {
+    name: 'Claude',
+    note: '需要 Claude Pro 或免費版,皆支援 PDF 上傳。',
+    buttons: [
+      { label: '📱 開啟 App', url: 'claude://', secondary: false },
+      { label: '🌐 網頁版', url: 'https://claude.ai/new', secondary: true }
+    ]
+  },
+  gemini: {
+    name: 'Gemini',
+    note: '免費版 Gemini 可上傳 PDF,Advanced 解析品質更佳。',
+    buttons: [
+      { label: '🌐 開啟 Gemini', url: 'https://gemini.google.com/app', secondary: true }
+    ]
+  },
+  chatgpt: {
+    name: 'ChatGPT',
+    note: '需要 ChatGPT Plus 或 Pro (GPT-4 才支援 PDF 上傳)。',
+    buttons: [
+      { label: '🌐 開啟 ChatGPT', url: 'https://chatgpt.com', secondary: true }
+    ]
+  }
+};
+
+function setPlatform(p) {
+  if (!PLATFORMS[p]) p = 'claude';
+  localStorage.setItem('ai_platform', p);
+  document.querySelectorAll('input[name="platform"]').forEach(r => r.checked = r.value === p);
+  const pf = PLATFORMS[p];
+  document.getElementById('step2-platform-name').textContent = pf.name;
+  document.getElementById('platform-hint').textContent = pf.note;
+  const btnsHtml = pf.buttons.map(b => {
+    const cls = b.secondary ? 'btn-ghost' : 'btn-secondary';
+    // claude:// scheme uses _self so iOS opens the app instead of a new tab
+    const target = b.url.startsWith('http') ? '_blank' : '_self';
+    return `<a href="${b.url}" target="${target}" rel="noopener" class="btn ${cls}" style="text-decoration:none;">${b.label}</a>`;
+  }).join('');
+  const wrap = pf.buttons.length > 1 ? `<div class="btn-row">${btnsHtml}</div>` : btnsHtml;
+  document.getElementById('step2-buttons').innerHTML = wrap;
+}
+
 async function applyAnalysis(data, fileName) {
   currentData = data;
   currentChecks = {};
@@ -1306,9 +1353,11 @@ document.getElementById('btn-analyze').addEventListener('click', async () => {
 
 document.getElementById('btn-copy-prompt').addEventListener('click', async () => {
   const prompt = buildPrompt();
+  const platform = localStorage.getItem('ai_platform') || 'claude';
+  const pfName = (PLATFORMS[platform] || PLATFORMS.claude).name;
   try {
     await navigator.clipboard.writeText(prompt);
-    toast('提示詞已複製。請開啟 claude.ai 上傳 PDF + 貼上提示詞');
+    toast(`提示詞已複製。請開啟 ${pfName} 上傳 PDF + 貼上提示詞`);
   } catch (e) {
     const ta = document.getElementById('manual-json-input');
     ta.value = prompt;
@@ -1335,6 +1384,12 @@ document.getElementById('mode-segment').addEventListener('change', (e) => {
   if (e.target.name === 'mode') {
     setMode(e.target.value);
     toast(e.target.value === 'manual' ? '已切換至手動模式' : '已切換至 API 模式');
+  }
+});
+
+document.getElementById('platform-segment').addEventListener('change', (e) => {
+  if (e.target.name === 'platform') {
+    setPlatform(e.target.value);
   }
 });
 
@@ -1512,6 +1567,9 @@ document.getElementById('btn-export-print').addEventListener('click', () => {
 function init() {
   const mode = localStorage.getItem('parse_mode') || 'manual';  // default: manual (free)
   setMode(mode);
+
+  const platform = localStorage.getItem('ai_platform') || 'claude';
+  setPlatform(platform);
 
   const savedKey = localStorage.getItem('anthropic_api_key');
   if (savedKey) document.getElementById('api-key-input').value = savedKey;
