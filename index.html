@@ -815,6 +815,13 @@ function buildPrompt() {
 - "看護/照顧保險金(一次)" → majorIllness.nursing
 - "特定傷病保險金(一次)" → majorIllness.specifiedIllness
 
+長期照護/失能月給付特別規則:
+- 若 PDF 中有保單險種名稱含「HAD」或「KAD」(三商美邦殘廢/失能照護險),
+  其「殘廢扶助保險金(每月)」金額視為失能月給付,
+  轉萬後填入 longTermCare.ltcInstallment
+  例:殘廢扶助保險金(每月) 30,000 元 → longTermCare.ltcInstallment = 3
+- 若已有「長照復健保險金分期」欄位,則兩者取較大值
+
 僅回傳 JSON,不要任何說明文字。`;
 }
 
