@@ -352,15 +352,15 @@
     display: flex; align-items: center; gap: 6px;
     padding: 3px 0; font-size: 12.5px;
   }
-  .ec-checkbox-row .box {
+  .ec-checkbox-row .box, .ec-checklist-row .cb .box {
     width: 13px; height: 13px; border: 1.5px solid #6C6C70;
     border-radius: 2px; display: inline-block;
     position: relative; flex-shrink: 0;
   }
-  .ec-checkbox-row .box.checked {
+  .ec-checkbox-row .box.checked, .ec-checklist-row .cb .box.checked {
     background: #E63946; border-color: #E63946;
   }
-  .ec-checkbox-row .box.checked::after {
+  .ec-checkbox-row .box.checked::after, .ec-checklist-row .cb .box.checked::after {
     content: ''; position: absolute;
     top: 1px; left: 4px; width: 3px; height: 7px;
     border: solid #fff; border-width: 0 2px 2px 0;
@@ -377,6 +377,43 @@
     display: flex; justify-content: space-between; align-items: center;
     font-size: 11px; color: #6C6C70;
     padding: 0 4px;
+  }
+
+  /* Checklist (六大項目) — added in right column */
+  .ec-checklist-header, .ec-checklist-row {
+    display: grid;
+    grid-template-columns: 1fr 24px 24px;
+    gap: 4px;
+    align-items: center;
+  }
+  .ec-checklist-header {
+    font-size: 10px;
+    color: #6C6C70;
+    text-align: center;
+    padding: 2px 0 4px;
+    border-bottom: 1px solid #EFEFEF;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+  .ec-checklist-row {
+    padding: 4px 0;
+    font-size: 12px;
+    line-height: 1.35;
+    border-bottom: 1px dotted #EFEFEF;
+  }
+  .ec-checklist-row:last-child { border-bottom: none; }
+  .ec-checklist-row .info .lbl { color: #1C1C1E; }
+  .ec-checklist-row .info .thresholds {
+    color: #8E8E93;
+    font-size: 10.5px;
+    margin-top: 1px;
+  }
+  .ec-checklist-row .cb { text-align: center; }
+  .ec-checklist-note {
+    font-size: 10px;
+    color: #8E8E93;
+    margin-top: 6px;
+    line-height: 1.4;
   }
 
   /* ==========================================================
@@ -410,7 +447,7 @@
 
     /* Ensure colored headers, banner, checkmarks all print */
     .ec-section-header, .ec-banner, .ec-title-pill,
-    .ec-checkbox-row .box.checked, .ec-brand {
+    .ec-checkbox-row .box.checked, .ec-checklist-row .cb .box.checked, .ec-brand {
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
     }
@@ -571,32 +608,6 @@
 
   <!-- ========== EXPORT VIEW ========== -->
   <section class="view" id="view-export">
-    <div class="card">
-      <h2>勾選項目</h2>
-      <p>由顧問依保戶情況勾選,完成後再匯出。</p>
-
-      <label style="margin-top:8px;">保險雙十原則</label>
-      <div class="checkbox-group" id="cb-tenten">
-        <label><input type="checkbox" data-key="tenIncome"><span>年繳保費≤年收入1/10</span></label>
-        <label><input type="checkbox" data-key="tenLifeAmount"><span>壽險保額≥年收入10倍</span></label>
-      </div>
-
-      <label style="margin-top:14px;">家庭責任</label>
-      <div class="checkbox-group" id="cb-family">
-        <label><input type="checkbox" data-key="spouse"><span>配偶</span></label>
-        <label><input type="checkbox" data-key="children"><span>子女</span></label>
-        <label><input type="checkbox" data-key="parents"><span>父母</span></label>
-        <label><input type="checkbox" data-key="loan"><span>貸款</span></label>
-        <label><input type="checkbox" data-key="funeral"><span>喪葬費</span></label>
-      </div>
-
-      <label style="margin-top:14px;">豁免</label>
-      <div class="checkbox-group" id="cb-waiver">
-        <label><input type="checkbox" data-key="policyHolder"><span>要保人</span></label>
-        <label><input type="checkbox" data-key="insured"><span>被保人</span></label>
-      </div>
-    </div>
-
     <div class="card">
       <h2>輸出</h2>
       <div class="btn-row">
@@ -1041,44 +1052,96 @@ function renderExportSection(sectionKey, data) {
   `;
 }
 
-function renderSpecialBlocks(checks) {
+// Six-category protection checklist (六大項目).
+// Each item has a threshold pair and an auto-check function that returns
+// { basic, complete } or { undetermined: true } if we can't decide from data.
+const CHECKLIST_ITEMS = [
+  {
+    label: '意外實支實付',
+    basic: '5萬', complete: '10萬', unit: '/次',
+    check: (d) => {
+      const v = Number(d.accident?.accidentBenefit) || 0;
+      return { basic: v >= 50000, complete: v >= 100000 };
+    }
+  },
+  {
+    label: '醫療實支實付',
+    basic: '雜30萬', complete: '雜50萬', unit: '/次',
+    check: (d) => {
+      const v = Number(d.realExpense?.miscMedical) || 0;
+      return { basic: v >= 300000, complete: v >= 500000 };
+    }
+  },
+  {
+    label: '重大傷病',
+    basic: '100萬', complete: '200萬', unit: '',
+    check: (d) => {
+      const v = Number(d.majorIllness?.criticalIllness) || 0;
+      return { basic: v >= 1000000, complete: v >= 2000000 };
+    }
+  },
+  {
+    label: '癌症一次金',
+    basic: '100萬', complete: '300萬', unit: '',
+    check: (d) => {
+      const v = Number(d.cancer?.firstCancerSevere) || 0;
+      return { basic: v >= 1000000, complete: v >= 3000000 };
+    }
+  },
+  {
+    label: '失能/長照',
+    basic: '月3萬', complete: '月5萬', unit: '',
+    check: (d) => {
+      // longTermCare.ltcInstallment is in 萬, assumed monthly
+      const v = Number(d.longTermCare?.ltcInstallment) || 0;
+      return { basic: v >= 3, complete: v >= 5 };
+    }
+  },
+  {
+    label: '壽險',
+    basic: '年薪×10', complete: '×15+負債', unit: '',
+    // Depends on client income/debt which we don't have
+    check: () => ({ undetermined: true })
+  }
+];
+
+function renderChecklist(data) {
+  const rows = CHECKLIST_ITEMS.map(item => {
+    const r = item.check(data) || {};
+    const basicCls = r.undetermined ? '' : (r.basic ? 'checked' : '');
+    const completeCls = r.undetermined ? '' : (r.complete ? 'checked' : '');
+    return `
+      <div class="ec-checklist-row">
+        <div class="info">
+          <div class="lbl">${item.label}</div>
+          <div class="thresholds">${item.basic}｜${item.complete}${item.unit}</div>
+        </div>
+        <div class="cb"><span class="box ${basicCls}"></span></div>
+        <div class="cb"><span class="box ${completeCls}"></span></div>
+      </div>
+    `;
+  }).join('');
   return `
     <div class="ec-section">
-      <div class="ec-section-header" style="background:#495057;"><span>保險雙十原則</span></div>
-      <div class="ec-section-body">
-        <div class="ec-checkbox-row"><span class="box ${checks.tenIncome ? 'checked' : ''}"></span>年繳保費不超過年收入的十分之一</div>
-        <div class="ec-checkbox-row"><span class="box ${checks.tenLifeAmount ? 'checked' : ''}"></span>壽險保額至少為年收入的十倍</div>
+      <div class="ec-section-header" style="background:#495057;">
+        <span>保障檢診 <span class="sub">六大項目</span></span>
       </div>
-    </div>
-    <div class="ec-section">
-      <div class="ec-section-header" style="background:#6C757D;"><span>家庭責任</span></div>
       <div class="ec-section-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px 8px;">
-          <div class="ec-checkbox-row"><span class="box ${checks.spouse ? 'checked' : ''}"></span>配偶</div>
-          <div class="ec-checkbox-row"><span class="box ${checks.children ? 'checked' : ''}"></span>子女</div>
-          <div class="ec-checkbox-row"><span class="box ${checks.parents ? 'checked' : ''}"></span>父母</div>
-          <div class="ec-checkbox-row"><span class="box ${checks.loan ? 'checked' : ''}"></span>貸款</div>
-          <div class="ec-checkbox-row"><span class="box ${checks.funeral ? 'checked' : ''}"></span>喪葬費</div>
+        <div class="ec-checklist-header">
+          <div></div>
+          <div>基本</div>
+          <div>完整</div>
         </div>
-      </div>
-    </div>
-    <div class="ec-section">
-      <div class="ec-section-header" style="background:#495057;"><span>豁免</span></div>
-      <div class="ec-section-body">
-        <div class="ec-checkbox-row"><span class="box ${checks.policyHolder ? 'checked' : ''}"></span>要保人</div>
-        <div style="font-size:10px;color:#8E8E93;line-height:1.5;margin:2px 0 8px 22px;">
-          要保人身故/全殘/罹患重大疾病或因意外、疾病致1-6級殘廢,重大燒燙傷;或重大疾病中的癱瘓與重大器官移植等,主、附約保費全部豁免。
-        </div>
-        <div class="ec-checkbox-row"><span class="box ${checks.insured ? 'checked' : ''}"></span>被保人</div>
-        <div style="font-size:10px;color:#8E8E93;line-height:1.5;margin:2px 0 0 22px;">
-          被保險人係因罹患重大疾病或因疾病、意外造成2-6級殘廢時,主、附約保費全部豁免。
+        ${rows}
+        <div class="ec-checklist-note">
+          ※ 自動判定僅供參考。壽險責任額需依保戶收入/負債評估。
         </div>
       </div>
     </div>
   `;
 }
 
-function renderExportCanvas(data, checks) {
+function renderExportCanvas(data) {
   const c = data.client || {};
   const agentName = localStorage.getItem('agent_name') || '';
   const agentPhone = localStorage.getItem('agent_phone') || '';
@@ -1103,7 +1166,7 @@ function renderExportCanvas(data, checks) {
     <div class="ec-grid">
       <div>${EXPORT_LAYOUT.col1.map(k => renderExportSection(k, data)).join('')}</div>
       <div>${EXPORT_LAYOUT.col2.map(k => renderExportSection(k, data)).join('')}</div>
-      <div>${EXPORT_LAYOUT.col3.map(k => renderExportSection(k, data)).join('')}${renderSpecialBlocks(checks)}</div>
+      <div>${EXPORT_LAYOUT.col3.map(k => renderExportSection(k, data)).join('')}${renderChecklist(data)}</div>
     </div>
 
     <div class="ec-disclaimer">
@@ -1288,27 +1351,7 @@ document.getElementById('export-btn').addEventListener('click', () => {
     toast('html2canvas 載入中,請稍候再試…', 3000);
     return;
   }
-  document.querySelectorAll('#cb-tenten input, #cb-family input, #cb-waiver input').forEach(cb => {
-    cb.checked = !!currentChecks[cb.dataset.key];
-    cb.parentElement.classList.toggle('on', cb.checked);
-  });
   switchView('export');
-});
-
-document.querySelectorAll('#cb-tenten input, #cb-family input, #cb-waiver input').forEach(cb => {
-  cb.addEventListener('change', () => {
-    cb.parentElement.classList.toggle('on', cb.checked);
-    currentChecks[cb.dataset.key] = cb.checked;
-    refreshExportPreview();
-    if (currentRecordId) {
-      saveAnalysis({
-        id: currentRecordId,
-        fileName: '(更新勾選)',
-        data: currentData,
-        checks: currentChecks
-      });
-    }
-  });
 });
 
 const dropzone = document.getElementById('dropzone');
