@@ -1065,10 +1065,10 @@ function renderExportSection(sectionKey, data) {
 const CHECKLIST_ITEMS = [
   {
     label: '意外實支實付',
-    basic: '5萬', complete: '10萬', unit: '/次',
+    basic: '3萬', complete: '10萬', unit: '/次',
     check: (d) => {
       const v = Number(d.accident?.accidentBenefit) || 0;
-      return { basic: v >= 50000, complete: v >= 100000 };
+      return { basic: v >= 30000, complete: v >= 100000 };
     }
   },
   {
