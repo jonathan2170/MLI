@@ -798,6 +798,7 @@ function buildPrompt() {
 - "緊急轉送保險金" → hospitalization.emergencyTransfer
 - "住院日額(每日)【C】" 意外段 → accident.accidentHosp
 - "加護病房(每日)" 意外段 → accident.accidentICU
+- "傷害醫療保險金(每次最高)" / "傷害醫療實支實付每次限額" → accident.accidentBenefit(意外傷害保險金)
 - "燒燙傷病房(每日)" / "重大燒燙傷" → accident.burns 取較高
 - "骨折/骨折未住院" → accident.fracture
 - "水陸航空身故保險金" → accident.transportAccident (轉萬)
@@ -832,6 +833,12 @@ function buildPrompt() {
 - 「住院醫療特定費用保險金/雜費」限額同時對應 realExpense.hospLimit 與 realExpense.miscMedical(填相同值)。
 - 「每日病房費用保險金」限額 → realExpense.roomCompensation。
 - 「門診手術或門診特定診療費用保險金」限額 → realExpense.opdSurgeryLimit。
+
+意外傷害保險金(意外實支實付)特別規則:
+- 「傷害醫療保險金(每次最高)」的每次限額 → accident.accidentBenefit。
+  例:全球人壽新傷害醫療保險附約 傷害醫療保險金(每次最高) 30,000 → accident.accidentBenefit = 30000
+- 注意:若有「入住加護病房加倍(如 60,000)」,仍取每次最高的基本限額(30,000),不要取加倍值。
+- 此欄位用於六大項目「意外實支實付」的自動判定(基本 3萬 / 完整 10萬)。
 
 僅回傳 JSON,不要任何說明文字。`;
 }
