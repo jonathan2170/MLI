@@ -822,6 +822,17 @@ function buildPrompt() {
   例:殘廢扶助保險金(每月) 30,000 元 → longTermCare.ltcInstallment = 3
 - 若已有「長照復健保險金分期」欄位,則兩者取較大值
 
+實支實付(含自負額型)特別規則:
+- 實支實付各欄位一律以「限額」金額填入,絕對不可加計自負額。
+  例:每日病房費用保險金 限額 4,000、自負額 1,000 → roomCompensation = 4000(不是 5000)
+  例:住院醫療特定費用保險金 限額 400,000、自負額 100,000 → hospLimit = 400000、miscMedical = 400000(不是 500000)
+  例:門診手術費用保險金 限額 30,000、自負額 15,000 → opdSurgeryLimit = 30000(不是 45000)
+- 若被保險人有多張實支實付保單(例如一張一般型+一張自負額型),
+  每個欄位取「限額最高」的那一張,不要把多張保單的限額相加。
+- 「住院醫療特定費用保險金/雜費」限額同時對應 realExpense.hospLimit 與 realExpense.miscMedical(填相同值)。
+- 「每日病房費用保險金」限額 → realExpense.roomCompensation。
+- 「門診手術或門診特定診療費用保險金」限額 → realExpense.opdSurgeryLimit。
+
 僅回傳 JSON,不要任何說明文字。`;
 }
 
